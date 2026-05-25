@@ -1,0 +1,133 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum KycKind {
+  PERSONAL
+  LAWYER
+  AGENT
+  VERIFIER
+}
+
+enum ProfessionalRole {
+  LAWYER
+  AGENT
+  VERIFIER
+}
+
+enum ProfessionalRoleApplicationStatus {
+  DRAFT
+  SUBMITTED
+  UNDER_REVIEW
+  APPROVED
+  REJECTED
+}
+
+enum PersonalKycStatus {
+  NONE
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model User {
+  id                 String                        @id @default(uuid())
+  email              String?                       @unique
+  emailVerifiedAt    DateTime?
+  phone              String?                       @unique
+  countryCode        String?
+  passwordHash       String?
+  pinHash            String?
+  disabled           Boolean                       @default(false)
+  displayName        String?
+  fullName           String?
+  profileCompletedAt DateTime?
+  personalKycApprovedAt DateTime?
+  personalKycStatus        PersonalKycStatus @default(NONE)
+  personalKycVersion       Int               @default(0)
+  personalKycRejectedReason String?
+  personalKycPendingSince DateTime?
+  socialProvider     String?
+  socialSubject      String?
+  createdAt          DateTime                      @default(now())
+  updatedAt          DateTime                      @updatedAt
+  devices            UserDevice[]
+  authAudits         AuthAudit[]
+  kycDocs            KycDocument[]
+  professionalApps   ProfessionalRoleApplication[]
+
+  @@unique([socialProvider, socialSubject])
+}
+
+model OtpChallenge {
+  id           String    @id @default(uuid())
+  target       String
+  channel      String
+  purpose      String
+  codeHash     String
+  expiresAt    DateTime
+  attemptCount Int       @default(0)
+  consumedAt   DateTime?
+  createdAt    DateTime  @default(now())
+
+  @@index([target, purpose, expiresAt])
+}
+
+model UserDevice {
+  id         String   @id @default(uuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id])
+  deviceId   String
+  ipAddress  String
+  macAddress String?
+  userAgent  String
+  tokenHash  String
+  lastSeenAt DateTime @default(now())
+  createdAt  DateTime @default(now())
+
+  @@unique([userId, deviceId])
+}
+
+model AuthAudit {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  event     String
+  detail    String
+  ipAddress String?
+  createdAt DateTime @default(now())
+}
+
+model ProfessionalRoleApplication {
+  id        String                              @id @default(uuid())
+  userId    String
+  user      User                                @relation(fields: [userId], references: [id])
+  role      ProfessionalRole
+  status    ProfessionalRoleApplicationStatus   @default(SUBMITTED)
+  payload   Json?
+  createdAt DateTime                            @default(now())
+  updatedAt DateTime                            @updatedAt
+  kycDocs   KycDocument[]
+
+  @@index([userId, role])
+}
+
+model KycDocument {
+  id                          String                         @id @default(uuid())
+  userId                      String
+  user                        User                           @relation(fields: [userId], references: [id])
+  kind                        KycKind                        @default(PERSONAL)
+  professionalApplicationId String?
+  professionalApplication   ProfessionalRoleApplication? @relation(fields: [professionalApplicationId], references: [id])
+  fileUrl                     String
+  fileKey                     String
+  uploader                    String
+  createdAt                   DateTime                       @default(now())
+
+  @@index([userId, kind])
+}
