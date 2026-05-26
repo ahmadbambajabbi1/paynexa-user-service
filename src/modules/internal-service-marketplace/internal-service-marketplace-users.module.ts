@@ -8,5 +8,6 @@ import { ServiceMarketplaceInternalGuard } from './service-marketplace-internal.
   imports: [PrismaModule],
   controllers: [InternalServiceMarketplaceUsersController],
   providers: [InternalServiceMarketplaceUsersService, ServiceMarketplaceInternalGuard],
+  exports: [InternalServiceMarketplaceUsersService],
 })
 export class InternalServiceMarketplaceUsersModule {}

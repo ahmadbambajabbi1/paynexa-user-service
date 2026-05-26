@@ -16,5 +16,6 @@ import { InternalAdminSecretGuard } from './internal-admin-secret.guard';
     R2KycUploadService,
     InternalAdminSecretGuard,
   ],
+  exports: [InternalAdminKycReviewService, InternalAdminPersonalKycService],
 })
 export class InternalAdminModule {}
