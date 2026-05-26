@@ -11,6 +11,8 @@ import { InternalServiceMarketplaceUsersModule } from './modules/internal-servic
 import { ProfessionalModule } from './modules/professional/professional.module';
 import { UsersModule } from './modules/users/users.module';
 
+import { RabbitmqRpcConsumer } from './infrastructure/rabbitmq/rabbitmq-rpc.consumer';
+
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
@@ -25,5 +27,6 @@ import { UsersModule } from './modules/users/users.module';
     InternalAdminModule,
     InternalServiceMarketplaceUsersModule,
   ],
+  providers: [RabbitmqRpcConsumer],
 })
 export class AppModule {}
