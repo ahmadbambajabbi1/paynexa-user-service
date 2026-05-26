@@ -11,6 +11,6 @@ async function bootstrap() {
       forbidUnknownValues: true,
     }),
   );
-  await app.listen(process.env.PORT ?? 5001);
+  await app.listen(process.env.PORT ?? 5001, '0.0.0.0');
 }
 bootstrap();
