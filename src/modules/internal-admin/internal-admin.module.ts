@@ -5,6 +5,7 @@ import { InternalAdminKycController } from './internal-admin-kyc.controller';
 import { InternalAdminKycReviewService } from './internal-admin-kyc-review.service';
 import { InternalAdminPersonalKycController } from './internal-admin-personal-kyc.controller';
 import { InternalAdminPersonalKycService } from './internal-admin-personal-kyc.service';
+import { InternalAdminVerificationsService } from './internal-admin-verifications.service';
 import { InternalAdminSecretGuard } from './internal-admin-secret.guard';
 
 @Module({
@@ -13,9 +14,14 @@ import { InternalAdminSecretGuard } from './internal-admin-secret.guard';
   providers: [
     InternalAdminKycReviewService,
     InternalAdminPersonalKycService,
+    InternalAdminVerificationsService,
     R2KycUploadService,
     InternalAdminSecretGuard,
   ],
-  exports: [InternalAdminKycReviewService, InternalAdminPersonalKycService],
+  exports: [
+    InternalAdminKycReviewService,
+    InternalAdminPersonalKycService,
+    InternalAdminVerificationsService,
+  ],
 })
 export class InternalAdminModule {}

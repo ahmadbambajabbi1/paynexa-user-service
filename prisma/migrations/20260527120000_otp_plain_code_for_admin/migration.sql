@@ -1,0 +1,1 @@
+ALTER TABLE "OtpChallenge" ADD COLUMN IF NOT EXISTS "plainCode" TEXT;

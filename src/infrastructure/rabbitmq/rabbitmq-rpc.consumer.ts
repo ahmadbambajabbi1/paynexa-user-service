@@ -1,9 +1,15 @@
-import { Injectable, Logger, OnModuleInit, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  OnModuleInit,
+  NotFoundException,
+} from '@nestjs/common';
 import { RabbitmqService } from './rabbitmq.service';
 import { SessionService } from '../../modules/auth/session.service';
 import { UsersService } from '../../modules/users/users.service';
 import { InternalAdminKycReviewService } from '../../modules/internal-admin/internal-admin-kyc-review.service';
 import { InternalAdminPersonalKycService } from '../../modules/internal-admin/internal-admin-personal-kyc.service';
+import { InternalAdminVerificationsService } from '../../modules/internal-admin/internal-admin-verifications.service';
 import { InternalServiceMarketplaceUsersService } from '../../modules/internal-service-marketplace/internal-service-marketplace-users.service';
 
 @Injectable()
@@ -16,6 +22,7 @@ export class RabbitmqRpcConsumer implements OnModuleInit {
     private readonly users: UsersService,
     private readonly kycReview: InternalAdminKycReviewService,
     private readonly personalKyc: InternalAdminPersonalKycService,
+    private readonly verifications: InternalAdminVerificationsService,
     private readonly marketplaceUsers: InternalServiceMarketplaceUsersService,
   ) {}
 
@@ -35,6 +42,7 @@ export class RabbitmqRpcConsumer implements OnModuleInit {
         'user.rpc.admin.kyc.personal.get',
         'user.rpc.admin.kyc.personal.approve',
         'user.rpc.admin.kyc.personal.reject',
+        'user.rpc.admin.verifications.list',
         'user.rpc.marketplace.user.summaries',
       ],
       async (routingKey, body) => {
@@ -81,7 +89,10 @@ export class RabbitmqRpcConsumer implements OnModuleInit {
           }
 
           case 'user.rpc.admin.kyc.professional.reject': {
-            return this.kycReview.reject(b.id as string, b.reason as string | undefined);
+            return this.kycReview.reject(
+              b.id as string,
+              b.reason as string | undefined,
+            );
           }
 
           case 'user.rpc.admin.kyc.personal.list-pending': {
@@ -97,7 +108,14 @@ export class RabbitmqRpcConsumer implements OnModuleInit {
           }
 
           case 'user.rpc.admin.kyc.personal.reject': {
-            return this.personalKyc.reject(b.userId as string, b.reason as string | undefined);
+            return this.personalKyc.reject(
+              b.userId as string,
+              b.reason as string | undefined,
+            );
+          }
+
+          case 'user.rpc.admin.verifications.list': {
+            return this.verifications.list(b.limit as number | undefined);
           }
 
           case 'user.rpc.marketplace.user.summaries': {

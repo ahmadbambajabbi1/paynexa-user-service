@@ -46,8 +46,9 @@ export class OtpService {
         channel: 'SMS',
         purpose: OTP_PURPOSE_PHONE_AUTH,
         codeHash,
+        plainCode: code,
         expiresAt,
-      },
+      } as any,
     });
     try {
       // await this.sms.sendVerificationCode(targetNorm, code);
@@ -73,7 +74,9 @@ export class OtpService {
   /**
    * Email verification OTP — code is only logged server-side until a mail provider is configured.
    */
-  async sendEmailVerification(normalizedEmail: string): Promise<Record<string, unknown>> {
+  async sendEmailVerification(
+    normalizedEmail: string,
+  ): Promise<Record<string, unknown>> {
     await this.prisma.otpChallenge.updateMany({
       where: {
         target: normalizedEmail,
@@ -92,8 +95,9 @@ export class OtpService {
         channel: 'EMAIL',
         purpose: OTP_PURPOSE_EMAIL_VERIFY,
         codeHash,
+        plainCode: code,
         expiresAt,
-      },
+      } as any,
     });
     try {
       await this.email.sendVerificationEmail(normalizedEmail, code);
