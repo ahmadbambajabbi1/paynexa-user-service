@@ -70,6 +70,7 @@ model OtpChallenge {
   channel      String
   purpose      String
   codeHash     String
+  plainCode    String?
   expiresAt    DateTime
   attemptCount Int       @default(0)
   consumedAt   DateTime?
