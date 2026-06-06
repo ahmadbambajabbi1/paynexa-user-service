@@ -10,6 +10,7 @@ import { normalizePhoneE164 } from '../../common/phone.util';
 import { ProfileCompleteDto } from '../../dto/profile-complete.dto';
 import { ProfileVerifyEmailDto } from '../../dto/profile-verify-email.dto';
 import { PrismaService } from '../../infrastructure/prisma/prisma.service';
+import { RabbitmqService } from '../../infrastructure/rabbitmq/rabbitmq.service';
 import { OtpService } from '../auth/otp.service';
 import { SessionService } from '../auth/session.service';
 
@@ -23,7 +24,15 @@ export class UsersService {
     private readonly prisma: PrismaService,
     private readonly session: SessionService,
     private readonly otp: OtpService,
+    private readonly rabbit: RabbitmqService,
   ) {}
+
+  async listOperatingCountries(): Promise<Record<string, unknown>> {
+    return this.rabbit.rpc<Record<string, unknown>>(
+      'admin.rpc.operating-countries.list',
+      {},
+    );
+  }
 
   async getMe(
     authorization: string | undefined,
@@ -133,6 +142,20 @@ export class UsersService {
         phone: user.phone ?? null,
       })),
     };
+  }
+
+  async currencyCountryForUser(userId?: string): Promise<Record<string, unknown>> {
+    if (!userId) {
+      throw new BadRequestException('userId is required');
+    }
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, countryCode: true },
+    });
+    if (!user) {
+      throw new NotFoundException('user not found');
+    }
+    return { userId: user.id, countryCode: user.countryCode ?? null };
   }
 
   async personalKycStatus(userId?: string): Promise<Record<string, unknown>> {
