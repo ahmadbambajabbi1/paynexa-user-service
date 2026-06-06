@@ -32,6 +32,7 @@ export class RabbitmqRpcConsumer implements OnModuleInit {
       [
         'user.rpc.session.resolve',
         'user.rpc.user.search',
+        'user.rpc.user.currency-country',
         'user.rpc.professionals.search',
         'user.rpc.kyc.personal.status',
         'user.rpc.admin.kyc.professional.list',
@@ -63,6 +64,10 @@ export class RabbitmqRpcConsumer implements OnModuleInit {
               if (e instanceof NotFoundException) return null;
               throw e;
             }
+          }
+
+          case 'user.rpc.user.currency-country': {
+            return this.users.currencyCountryForUser(b.userId as string | undefined);
           }
 
           case 'user.rpc.professionals.search': {

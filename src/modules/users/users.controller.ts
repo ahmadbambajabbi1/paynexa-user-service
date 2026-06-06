@@ -21,6 +21,11 @@ export class UsersController {
     return { service: 'user-service', status: 'ok' };
   }
 
+  @Get('countries/operating')
+  operatingCountries(): Promise<Record<string, unknown>> {
+    return this.users.listOperatingCountries();
+  }
+
   @Get('me')
   me(
     @Headers('authorization') authorization?: string,
