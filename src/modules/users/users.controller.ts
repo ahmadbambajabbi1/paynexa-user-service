@@ -10,6 +10,7 @@ import {
 import { PhoneLookupQueryDto } from '../../dto/phone-lookup-query.dto';
 import { ProfileCompleteDto } from '../../dto/profile-complete.dto';
 import { ProfileVerifyEmailDto } from '../../dto/profile-verify-email.dto';
+import { RegisterFcmTokenDto } from '../../dto/register-fcm-token.dto';
 import { UsersService } from './users.service';
 
 @Controller('users')
@@ -88,5 +89,20 @@ export class UsersController {
     @Headers('x-device-id') deviceId?: string,
   ): Promise<Record<string, unknown>> {
     return this.users.resendProfileEmailVerification(authorization, deviceId);
+  }
+
+  @HttpCode(200)
+  @Post('devices/fcm-token')
+  registerFcmToken(
+    @Body() dto: RegisterFcmTokenDto,
+    @Headers('authorization') authorization?: string,
+    @Headers('x-device-id') deviceId?: string,
+  ): Promise<Record<string, unknown>> {
+    return this.users.registerFcmToken(
+      authorization,
+      deviceId,
+      dto.fcmToken,
+      dto.platform,
+    );
   }
 }

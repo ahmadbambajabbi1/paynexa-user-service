@@ -2,6 +2,7 @@ import {
   BadRequestException,
   ConflictException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { PersonalKycStatus, ProfessionalRole, ProfessionalRoleApplicationStatus } from '@prisma/client';
@@ -20,6 +21,8 @@ function normalizeEmail(raw: string): string {
 
 @Injectable()
 export class UsersService {
+  private readonly logger = new Logger(UsersService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly session: SessionService,
@@ -337,5 +340,64 @@ export class UsersService {
       throw new BadRequestException('set email on your profile first');
     }
     return this.otp.sendEmailVerification(row.email);
+  }
+
+  async registerFcmToken(
+    authorization: string | undefined,
+    deviceIdHeader: string | undefined,
+    fcmToken: string,
+    platform?: string,
+  ): Promise<Record<string, unknown>> {
+    const session = await this.session.resolveAuthenticatedSession(
+      authorization,
+      deviceIdHeader,
+    );
+    const token = fcmToken.trim();
+    if (!token) {
+      throw new BadRequestException('fcmToken is required');
+    }
+    const device = await this.prisma.userDevice.findUnique({
+      where: {
+        userId_deviceId: {
+          userId: session.user.id,
+          deviceId: session.deviceId,
+        },
+      },
+    });
+    if (!device) {
+      throw new NotFoundException('device session not found');
+    }
+    await this.prisma.userDevice.update({
+      where: { id: device.id },
+      data: {
+        fcmToken: token,
+        fcmPlatform: platform?.trim() || null,
+        lastSeenAt: new Date(),
+      },
+    });
+    this.logger.log(
+      `FCM token registered for user ${session.user.id} (${platform?.trim() || 'unknown'})`,
+    );
+    return { ok: true };
+  }
+
+  async listPushTokensForUser(userIdRaw?: string): Promise<Record<string, unknown>> {
+    const userId = userIdRaw?.trim();
+    if (!userId) {
+      throw new BadRequestException('userId is required');
+    }
+    const rows = await this.prisma.userDevice.findMany({
+      where: { userId, fcmToken: { not: null } },
+      select: { fcmToken: true, fcmPlatform: true, deviceId: true },
+    });
+    return {
+      items: rows
+        .filter((row) => typeof row.fcmToken === 'string' && row.fcmToken.length > 0)
+        .map((row) => ({
+          token: row.fcmToken as string,
+          platform: row.fcmPlatform,
+          deviceId: row.deviceId,
+        })),
+    };
   }
 }
