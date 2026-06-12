@@ -80,18 +80,21 @@ model OtpChallenge {
 }
 
 model UserDevice {
-  id         String   @id @default(uuid())
-  userId     String
-  user       User     @relation(fields: [userId], references: [id])
-  deviceId   String
-  ipAddress  String
-  macAddress String?
-  userAgent  String
-  tokenHash  String
-  lastSeenAt DateTime @default(now())
-  createdAt  DateTime @default(now())
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  deviceId    String
+  ipAddress   String
+  macAddress  String?
+  userAgent   String
+  tokenHash   String
+  fcmToken    String?
+  fcmPlatform String?
+  lastSeenAt  DateTime @default(now())
+  createdAt   DateTime @default(now())
 
   @@unique([userId, deviceId])
+  @@index([userId, fcmToken])
 }
 
 model AuthAudit {

@@ -45,6 +45,7 @@ export class RabbitmqRpcConsumer implements OnModuleInit {
         'user.rpc.admin.kyc.personal.reject',
         'user.rpc.admin.verifications.list',
         'user.rpc.marketplace.user.summaries',
+        'user.rpc.push-tokens.list',
       ],
       async (routingKey, body) => {
         const b = body as Record<string, unknown>;
@@ -125,6 +126,10 @@ export class RabbitmqRpcConsumer implements OnModuleInit {
 
           case 'user.rpc.marketplace.user.summaries': {
             return this.marketplaceUsers.summaries(b.userIds as string[]);
+          }
+
+          case 'user.rpc.push-tokens.list': {
+            return this.users.listPushTokensForUser(b.userId as string | undefined);
           }
 
           default:
