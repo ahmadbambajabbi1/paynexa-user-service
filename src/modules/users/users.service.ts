@@ -198,63 +198,16 @@ export class UsersService {
       authorization,
       deviceIdHeader,
     );
-    const emailNorm = normalizeEmail(dto.email);
     const displayName = dto.displayName.trim();
     const fullName = dto.fullName.trim();
+    const now = new Date();
 
     const current = await this.prisma.user.findUnique({
       where: { id: session.user.id },
-      select: {
-        email: true,
-        emailVerifiedAt: true,
-        profileCompletedAt: true,
-      },
+      select: { id: true },
     });
     if (!current) {
       throw new NotFoundException('user not found');
-    }
-
-    const taken = await this.prisma.user.findFirst({
-      where: { email: emailNorm, NOT: { id: session.user.id } },
-      select: { id: true },
-    });
-    if (taken) {
-      throw new ConflictException('email already in use');
-    }
-
-    if (
-      current.email === emailNorm &&
-      current.emailVerifiedAt &&
-      current.profileCompletedAt
-    ) {
-      await this.prisma.user.update({
-        where: { id: session.user.id },
-        data: { displayName, fullName },
-      });
-      await this.prisma.authAudit.create({
-        data: {
-          userId: session.user.id,
-          event: 'profile_updated',
-          detail: 'display name / full name',
-        },
-      });
-      return {
-        ok: true,
-        profileComplete: true,
-        needsEmailVerification: false,
-        profileCompletedAt: current.profileCompletedAt.toISOString(),
-      };
-    }
-
-    if (current.email && current.email !== emailNorm) {
-      await this.prisma.otpChallenge.updateMany({
-        where: {
-          target: current.email,
-          purpose: OTP_PURPOSE_EMAIL_VERIFY,
-          consumedAt: null,
-        },
-        data: { consumedAt: new Date() },
-      });
     }
 
     await this.prisma.user.update({
@@ -262,23 +215,21 @@ export class UsersService {
       data: {
         displayName,
         fullName,
-        email: emailNorm,
-        emailVerifiedAt: null,
-        profileCompletedAt: null,
+        profileCompletedAt: now,
       },
     });
-    await this.otp.sendEmailVerification(emailNorm);
     await this.prisma.authAudit.create({
       data: {
         userId: session.user.id,
-        event: 'profile_email_pending',
-        detail: 'verification code sent',
+        event: 'profile_completed',
+        detail: 'display name / full name',
       },
     });
     return {
       ok: true,
-      profileComplete: false,
-      needsEmailVerification: true,
+      profileComplete: true,
+      needsEmailVerification: false,
+      profileCompletedAt: now.toISOString(),
     };
   }
 

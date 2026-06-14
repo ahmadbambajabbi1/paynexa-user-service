@@ -1,4 +1,4 @@
-import { IsEmail, IsString, MaxLength, MinLength } from 'class-validator';
+import { IsString, MaxLength, MinLength } from 'class-validator';
 
 export class ProfileCompleteDto {
   @IsString()
@@ -10,7 +10,4 @@ export class ProfileCompleteDto {
   @MinLength(2)
   @MaxLength(200)
   fullName!: string;
-
-  @IsEmail()
-  email!: string;
 }

@@ -134,18 +134,14 @@ export class PhoneAuthService {
     await this.rabbit.publish('user.created', {
       userId: user.id,
       phone,
-      profileCompleted: Boolean(
-        user.profileCompletedAt && user.emailVerifiedAt,
-      ),
+      profileCompleted: Boolean(user.profileCompletedAt),
       occurredAt: new Date().toISOString(),
     });
     return {
       token: sess.token,
       deviceId,
       userId: user.id,
-      profileCompleted: Boolean(
-        user.profileCompletedAt && user.emailVerifiedAt,
-      ),
+      profileCompleted: Boolean(user.profileCompletedAt),
     };
   }
 
@@ -212,9 +208,7 @@ export class PhoneAuthService {
       token: sess.token,
       deviceId,
       userId: user.id,
-      profileCompleted: Boolean(
-        fresh?.profileCompletedAt && fresh?.emailVerifiedAt,
-      ),
+      profileCompleted: Boolean(fresh?.profileCompletedAt),
     };
   }
 }
