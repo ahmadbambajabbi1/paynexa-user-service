@@ -24,92 +24,70 @@ export class OtpService {
     private readonly email: EmailService,
   ) {}
 
-  /**
-   * Creates OTP, persists it, sends via Twilio. Response never includes the code.
-   */
   async sendPhoneAuth(targetNorm: string): Promise<Record<string, unknown>> {
-    await this.prisma.otpChallenge.updateMany({
-      where: {
-        target: targetNorm,
-        purpose: OTP_PURPOSE_PHONE_AUTH,
-        consumedAt: null,
-      },
-      data: { consumedAt: new Date() },
+    return this.issueOtp({
+      targetNorm,
+      channel: 'SMS',
+      purpose: OTP_PURPOSE_PHONE_AUTH,
+      deliver: (code) => this.sms.sendVerificationCode(targetNorm, code),
     });
-    const code = String(randomInt(0, 1_000_000)).padStart(6, '0');
-    console.log({ code });
-    const codeHash = hashOtp(code);
-    const expiresAt = new Date(Date.now() + OTP_TTL_MS);
-    const challenge = await this.prisma.otpChallenge.create({
-      data: {
-        target: targetNorm,
-        channel: 'SMS',
-        purpose: OTP_PURPOSE_PHONE_AUTH,
-        codeHash,
-        plainCode: code,
-        expiresAt,
-      } as any,
-    });
-    try {
-      // await this.sms.sendVerificationCode(targetNorm, code);
-    } catch (err) {
-      await this.prisma.otpChallenge.delete({ where: { id: challenge.id } });
-      throw err;
-    }
-    this.logger.log(
-      JSON.stringify({
-        event: 'otp_sent',
-        target: targetNorm,
-        channel: 'SMS',
-        purpose: OTP_PURPOSE_PHONE_AUTH,
-        expiresAt: expiresAt.toISOString(),
-      }),
-    );
-    return {
-      ok: true,
-      expiresAt: expiresAt.toISOString(),
-    };
   }
 
   /**
-   * Email verification OTP — code is only logged server-side until a mail provider is configured.
+   * Email verification OTP — delivered via configured mail provider.
    */
   async sendEmailVerification(
     normalizedEmail: string,
   ): Promise<Record<string, unknown>> {
+    return this.issueOtp({
+      targetNorm: normalizedEmail,
+      channel: 'EMAIL',
+      purpose: OTP_PURPOSE_EMAIL_VERIFY,
+      deliver: (code) => this.email.sendVerificationEmail(normalizedEmail, code),
+      logEvent: 'email_otp_sent',
+    });
+  }
+
+  private async issueOtp(params: {
+    targetNorm: string;
+    channel: 'SMS' | 'EMAIL';
+    purpose: string;
+    deliver: (code: string) => Promise<void>;
+    logEvent?: string;
+  }): Promise<Record<string, unknown>> {
     await this.prisma.otpChallenge.updateMany({
       where: {
-        target: normalizedEmail,
-        purpose: OTP_PURPOSE_EMAIL_VERIFY,
+        target: params.targetNorm,
+        purpose: params.purpose,
         consumedAt: null,
       },
       data: { consumedAt: new Date() },
     });
     const code = String(randomInt(0, 1_000_000)).padStart(6, '0');
-    console.log({ email: normalizedEmail, code });
     const codeHash = hashOtp(code);
     const expiresAt = new Date(Date.now() + OTP_TTL_MS);
     const challenge = await this.prisma.otpChallenge.create({
       data: {
-        target: normalizedEmail,
-        channel: 'EMAIL',
-        purpose: OTP_PURPOSE_EMAIL_VERIFY,
+        target: params.targetNorm,
+        channel: params.channel,
+        purpose: params.purpose,
         codeHash,
         plainCode: code,
         expiresAt,
       } as any,
     });
     try {
-      await this.email.sendVerificationEmail(normalizedEmail, code);
+      await params.deliver(code);
     } catch (err) {
       await this.prisma.otpChallenge.delete({ where: { id: challenge.id } });
       throw err;
     }
     this.logger.log(
       JSON.stringify({
-        event: 'email_otp_sent',
-        target: normalizedEmail,
-        purpose: OTP_PURPOSE_EMAIL_VERIFY,
+        event: params.logEvent ?? 'otp_sent',
+        target: params.targetNorm,
+        channel: params.channel,
+        purpose: params.purpose,
         expiresAt: expiresAt.toISOString(),
       }),
     );

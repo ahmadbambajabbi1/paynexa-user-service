@@ -60,8 +60,31 @@ model User {
   authAudits         AuthAudit[]
   kycDocs            KycDocument[]
   professionalApps   ProfessionalRoleApplication[]
+  deliveryAddresses  UserDeliveryAddress[]
 
   @@unique([socialProvider, socialSubject])
+}
+
+model UserDeliveryAddress {
+  id                   String   @id @default(uuid())
+  userId               String   @map("user_id")
+  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  label                String?
+  fullName             String   @map("full_name")
+  phone                String
+  email                String
+  addressLine1         String   @map("address_line_1")
+  addressLine2         String?  @map("address_line_2")
+  city                 String
+  stateRegion          String   @map("state_region")
+  postalCode           String   @map("postal_code")
+  country              String
+  deliveryInstructions String?  @map("delivery_instructions")
+  isDefault            Boolean  @default(false) @map("is_default")
+  createdAt            DateTime @default(now()) @map("created_at")
+  updatedAt            DateTime @updatedAt @map("updated_at")
+
+  @@index([userId])
 }
 
 model OtpChallenge {
