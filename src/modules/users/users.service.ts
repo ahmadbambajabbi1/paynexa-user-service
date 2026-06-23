@@ -10,6 +10,7 @@ import { OTP_PURPOSE_EMAIL_VERIFY } from '../../common/auth.constants';
 import { normalizePhoneE164 } from '../../common/phone.util';
 import { ProfileCompleteDto } from '../../dto/profile-complete.dto';
 import { ProfileVerifyEmailDto } from '../../dto/profile-verify-email.dto';
+import { CreateDeliveryAddressDto } from '../../dto/create-delivery-address.dto';
 import { PrismaService } from '../../infrastructure/prisma/prisma.service';
 import { RabbitmqService } from '../../infrastructure/rabbitmq/rabbitmq.service';
 import { OtpService } from '../auth/otp.service';
@@ -350,5 +351,96 @@ export class UsersService {
           deviceId: row.deviceId,
         })),
     };
+  }
+
+  private mapDeliveryAddress(row: {
+    id: string;
+    label: string | null;
+    fullName: string;
+    phone: string;
+    email: string;
+    addressLine1: string;
+    addressLine2: string | null;
+    city: string;
+    stateRegion: string;
+    postalCode: string;
+    country: string;
+    deliveryInstructions: string | null;
+    isDefault: boolean;
+    createdAt: Date;
+    updatedAt: Date;
+  }) {
+    return {
+      id: row.id,
+      label: row.label,
+      fullName: row.fullName,
+      phone: row.phone,
+      email: row.email,
+      addressLine1: row.addressLine1,
+      addressLine2: row.addressLine2,
+      city: row.city,
+      stateRegion: row.stateRegion,
+      postalCode: row.postalCode,
+      country: row.country,
+      deliveryInstructions: row.deliveryInstructions,
+      isDefault: row.isDefault,
+      createdAt: row.createdAt.toISOString(),
+      updatedAt: row.updatedAt.toISOString(),
+    };
+  }
+
+  async listDeliveryAddresses(
+    authorization: string | undefined,
+    deviceIdHeader: string | undefined,
+  ): Promise<Record<string, unknown>> {
+    const session = await this.session.resolveAuthenticatedSession(
+      authorization,
+      deviceIdHeader,
+    );
+    const rows = await this.prisma.userDeliveryAddress.findMany({
+      where: { userId: session.user.id },
+      orderBy: [{ isDefault: 'desc' }, { updatedAt: 'desc' }],
+    });
+    return { items: rows.map((row) => this.mapDeliveryAddress(row)) };
+  }
+
+  async createDeliveryAddress(
+    authorization: string | undefined,
+    deviceIdHeader: string | undefined,
+    dto: CreateDeliveryAddressDto,
+  ): Promise<Record<string, unknown>> {
+    const session = await this.session.resolveAuthenticatedSession(
+      authorization,
+      deviceIdHeader,
+    );
+    const userId = session.user.id;
+    const makeDefault = dto.isDefault === true;
+    if (makeDefault) {
+      await this.prisma.userDeliveryAddress.updateMany({
+        where: { userId },
+        data: { isDefault: false },
+      });
+    }
+    const existingCount = await this.prisma.userDeliveryAddress.count({
+      where: { userId },
+    });
+    const row = await this.prisma.userDeliveryAddress.create({
+      data: {
+        userId,
+        label: dto.label?.trim() || null,
+        fullName: dto.fullName.trim(),
+        phone: dto.phone.trim(),
+        email: dto.email.trim().toLowerCase(),
+        addressLine1: dto.addressLine1.trim(),
+        addressLine2: dto.addressLine2?.trim() || null,
+        city: dto.city.trim(),
+        stateRegion: dto.stateRegion.trim(),
+        postalCode: dto.postalCode.trim(),
+        country: dto.country.trim(),
+        deliveryInstructions: dto.deliveryInstructions?.trim() || null,
+        isDefault: makeDefault || existingCount === 0,
+      },
+    });
+    return this.mapDeliveryAddress(row);
   }
 }

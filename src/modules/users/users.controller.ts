@@ -11,6 +11,7 @@ import { PhoneLookupQueryDto } from '../../dto/phone-lookup-query.dto';
 import { ProfileCompleteDto } from '../../dto/profile-complete.dto';
 import { ProfileVerifyEmailDto } from '../../dto/profile-verify-email.dto';
 import { RegisterFcmTokenDto } from '../../dto/register-fcm-token.dto';
+import { CreateDeliveryAddressDto } from '../../dto/create-delivery-address.dto';
 import { UsersService } from './users.service';
 
 @Controller('users')
@@ -104,5 +105,23 @@ export class UsersController {
       dto.fcmToken,
       dto.platform,
     );
+  }
+
+  @Get('me/delivery-addresses')
+  listDeliveryAddresses(
+    @Headers('authorization') authorization?: string,
+    @Headers('x-device-id') deviceId?: string,
+  ): Promise<Record<string, unknown>> {
+    return this.users.listDeliveryAddresses(authorization, deviceId);
+  }
+
+  @HttpCode(201)
+  @Post('me/delivery-addresses')
+  createDeliveryAddress(
+    @Body() dto: CreateDeliveryAddressDto,
+    @Headers('authorization') authorization?: string,
+    @Headers('x-device-id') deviceId?: string,
+  ): Promise<Record<string, unknown>> {
+    return this.users.createDeliveryAddress(authorization, deviceId, dto);
   }
 }
