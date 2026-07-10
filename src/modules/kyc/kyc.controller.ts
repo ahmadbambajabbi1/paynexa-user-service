@@ -47,6 +47,31 @@ export class KycController {
     });
   }
 
+  @Post('transaction-proofs/upload')
+  @UseInterceptors(FileInterceptor('file', { limits: { fileSize: 25 * 1024 * 1024 } }))
+  async uploadTransactionProof(
+    @UploadedFile() file: MemoryUploadedFile | undefined,
+    @Body('transactionId') transactionId: string | undefined,
+    @Headers('authorization') authorization?: string,
+    @Headers('x-device-id') deviceId?: string,
+  ): Promise<{ key: string }> {
+    if (!file?.buffer?.length) {
+      throw new BadRequestException('Missing file');
+    }
+    const txId = transactionId?.trim();
+    if (!txId) {
+      throw new BadRequestException('transactionId required');
+    }
+    const session = await this.session.resolveAuthenticatedSession(authorization, deviceId);
+    return this.r2Kyc.uploadTransactionProof({
+      userId: session.user.id,
+      transactionId: txId,
+      buffer: file.buffer,
+      contentType: file.mimetype || 'application/octet-stream',
+      originalName: file.originalname,
+    });
+  }
+
   @Post('kyc')
   async submitKyc(
     @Headers('authorization') authorization: string | undefined,

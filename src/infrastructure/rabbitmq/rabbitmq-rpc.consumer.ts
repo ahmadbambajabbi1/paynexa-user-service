@@ -11,6 +11,7 @@ import { InternalAdminKycReviewService } from '../../modules/internal-admin/inte
 import { InternalAdminPersonalKycService } from '../../modules/internal-admin/internal-admin-personal-kyc.service';
 import { InternalAdminVerificationsService } from '../../modules/internal-admin/internal-admin-verifications.service';
 import { InternalServiceMarketplaceUsersService } from '../../modules/internal-service-marketplace/internal-service-marketplace-users.service';
+import { R2KycUploadService } from '../../infrastructure/r2/r2-kyc-upload.service';
 
 @Injectable()
 export class RabbitmqRpcConsumer implements OnModuleInit {
@@ -24,6 +25,7 @@ export class RabbitmqRpcConsumer implements OnModuleInit {
     private readonly personalKyc: InternalAdminPersonalKycService,
     private readonly verifications: InternalAdminVerificationsService,
     private readonly marketplaceUsers: InternalServiceMarketplaceUsersService,
+    private readonly r2Kyc: R2KycUploadService,
   ) {}
 
   async onModuleInit() {
@@ -46,6 +48,7 @@ export class RabbitmqRpcConsumer implements OnModuleInit {
         'user.rpc.admin.verifications.list',
         'user.rpc.marketplace.user.summaries',
         'user.rpc.push-tokens.list',
+        'user.rpc.storage.signed-url',
       ],
       async (routingKey, body) => {
         const b = body as Record<string, unknown>;
@@ -130,6 +133,17 @@ export class RabbitmqRpcConsumer implements OnModuleInit {
 
           case 'user.rpc.push-tokens.list': {
             return this.users.listPushTokensForUser(b.userId as string | undefined);
+          }
+
+          case 'user.rpc.storage.signed-url': {
+            const key = String(b.key ?? '').trim();
+            if (!key) {
+              throw new Error('key required');
+            }
+            const expiresIn = Number(b.expiresInSeconds ?? 900);
+            return {
+              url: await this.r2Kyc.getSignedDownloadUrl(key, Number.isFinite(expiresIn) ? expiresIn : 900),
+            };
           }
 
           default:

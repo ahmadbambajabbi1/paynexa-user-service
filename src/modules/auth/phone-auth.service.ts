@@ -29,12 +29,12 @@ export class PhoneAuthService {
     countryCode?: string,
   ): Promise<Record<string, unknown>> {
     const phone = normalizePhoneE164(rawPhone);
-    if (countryCode) {
+    if (countryCode?.trim()) {
       const existing = await this.prisma.user.findUnique({ where: { phone } });
-      if (existing) {
+      if (existing && existing.countryCode !== countryCode.trim()) {
         await this.prisma.user.update({
           where: { id: existing.id },
-          data: { countryCode },
+          data: { countryCode: countryCode.trim() },
         });
       }
     }

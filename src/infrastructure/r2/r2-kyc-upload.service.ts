@@ -71,6 +71,37 @@ export class R2KycUploadService {
     return { key };
   }
 
+  async uploadTransactionProof(input: {
+    userId: string;
+    transactionId: string;
+    buffer: Buffer;
+    contentType: string;
+    originalName?: string;
+  }): Promise<{ key: string }> {
+    const ct = (input.contentType || '').toLowerCase();
+    if (!ALLOWED_KYC_MIME.has(ct)) {
+      throw new BadRequestException('Only JPEG, PNG, WebP, GIF, or PDF files are allowed');
+    }
+    const ext = safeExt(input.originalName, ct);
+    const txId = input.transactionId.trim().replace(/[^a-zA-Z0-9_-]/g, '');
+    const key = `transaction_proofs/${txId}/${input.userId}/${Date.now()}-${randomBytes(8).toString('hex')}${ext}`;
+    try {
+      await this.client().send(
+        new PutObjectCommand({
+          Bucket: this.bucket(),
+          Key: key,
+          Body: input.buffer,
+          ContentType: ct,
+        }),
+      );
+    } catch {
+      throw new ServiceUnavailableException(
+        'Proof upload is temporarily unavailable. Please try again shortly.',
+      );
+    }
+    return { key };
+  }
+
   /** Time-limited URL for admins to download a private KYC object. */
   async getSignedDownloadUrl(key: string, expiresInSeconds = 900): Promise<string> {
     const cmd = new GetObjectCommand({
