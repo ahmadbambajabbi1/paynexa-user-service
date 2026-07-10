@@ -31,10 +31,10 @@ export class UsersService {
     private readonly rabbit: RabbitmqService,
   ) {}
 
-  async listOperatingCountries(): Promise<Record<string, unknown>> {
+  async listOperatingCountries(sinceVersion?: string): Promise<Record<string, unknown>> {
     return this.rabbit.rpc<Record<string, unknown>>(
       'admin.rpc.operating-countries.list',
-      {},
+      sinceVersion?.trim() ? { sinceVersion: sinceVersion.trim() } : {},
     );
   }
 
@@ -75,10 +75,22 @@ export class UsersService {
     if (!query) {
       throw new BadRequestException('query is required');
     }
+    let phoneQuery: string | undefined;
+    if (query.startsWith('+')) {
+      try {
+        phoneQuery = normalizePhoneE164(query);
+      } catch {
+        phoneQuery = undefined;
+      }
+    }
     const target = await this.prisma.user.findFirst({
       where: {
         disabled: false,
-        OR: [{ email: normalizeEmail(query) }, { phone: query }, { id: query }],
+        OR: [
+          { email: normalizeEmail(query) },
+          ...(phoneQuery ? [{ phone: phoneQuery }] : [{ phone: query }]),
+          { id: query },
+        ],
       },
       select: {
         id: true,

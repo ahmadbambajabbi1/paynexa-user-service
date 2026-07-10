@@ -6,10 +6,16 @@ import {
 } from '@nestjs/common';
 import { createHash, randomBytes } from 'node:crypto';
 import { PrismaService } from '../../infrastructure/prisma/prisma.service';
+import { RabbitmqService } from '../../infrastructure/rabbitmq/rabbitmq.service';
+import { SessionCacheService } from '../../infrastructure/session-cache/session-cache.service';
 
 @Injectable()
 export class SessionService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly rabbit: RabbitmqService,
+    private readonly sessionCache: SessionCacheService,
+  ) {}
 
   async issueDeviceSession(
     userId: string,
@@ -70,6 +76,13 @@ export class SessionService {
         },
       });
     }
+    await this.sessionCache.put(deviceId, tokenHash, userId);
+    this.rabbit.publish('session.created', {
+      deviceId,
+      tokenHash,
+      userId,
+      occurredAt: new Date().toISOString(),
+    });
     return { token: rawToken };
   }
 
@@ -145,6 +158,7 @@ export class SessionService {
       where: { id: device.id },
       data: { lastSeenAt: new Date() },
     });
+    await this.sessionCache.put(deviceIdHeader, tokenHash, device.user.id);
     const { disabled, ...user } = device.user;
     void disabled;
     return {

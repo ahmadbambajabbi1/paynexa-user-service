@@ -24,8 +24,8 @@ export class UsersController {
   }
 
   @Get('countries/operating')
-  operatingCountries(): Promise<Record<string, unknown>> {
-    return this.users.listOperatingCountries();
+  operatingCountries(@Query('sinceVersion') sinceVersion?: string): Promise<Record<string, unknown>> {
+    return this.users.listOperatingCountries(sinceVersion);
   }
 
   @Get('me')
